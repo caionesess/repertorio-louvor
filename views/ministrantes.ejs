@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ministrantes - Louvor dos Jovens ICO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased flex flex-col">
+  <nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 px-4 sm:px-6 py-3.5">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center justify-between w-full sm:w-auto">
+        <h1 class="text-xl font-bold tracking-tight text-amber-400">Louvor dos Jovens ICO</h1>
+      </div>
+      <div class="flex items-center justify-around w-full sm:w-auto space-x-1 sm:space-x-4 border-t sm:border-t-0 border-slate-700/60 pt-2 sm:pt-0 text-sm">
+        <a href="/" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Repertórios</a>
+        <a href="/ministrantes" class="px-3 py-1.5 rounded-lg bg-slate-700 text-amber-300 font-semibold transition-colors">Ministrantes</a>
+        <a href="/analytics" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Analytics</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
+    <% if (erro === 'duplicado') { %>
+      <div class="bg-rose-900/40 border border-rose-500 text-rose-200 px-4 py-3 rounded-xl text-sm">
+        Esse integrante já está cadastrado.
+      </div>
+    <% } else if (erro === 'em_uso') { %>
+      <div class="bg-rose-900/40 border border-rose-500 text-rose-200 px-4 py-3 rounded-xl text-sm">
+        Não é possível excluir este ministrante pois há canções registradas com ele.
+      </div>
+    <% } %>
+
+    <!-- Cadastro -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-md">
+      <h2 class="text-base font-semibold text-white mb-3">Cadastrar Novo Ministrante</h2>
+      <form action="/ministrantes" method="POST" class="flex flex-col sm:flex-row gap-2.5">
+        <input type="text" name="nome" placeholder="Nome do integrante (Ex: Sarah Souza)" required 
+          class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-base sm:text-sm focus:outline-none focus:border-amber-400">
+        <button type="submit" class="bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-slate-950 font-bold py-3 sm:py-2.5 px-6 rounded-xl text-sm transition-all shadow-sm">
+          Cadastrar
+        </button>
+      </form>
+    </div>
+
+    <!-- Lista de Integrantes -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-md">
+      <h2 class="text-base font-semibold text-white mb-3">Integrantes Cadastrados (<%= ministrantes.length %>)</h2>
+      <div class="divide-y divide-slate-700/60">
+        <% if (ministrantes.length === 0) { %>
+          <p class="text-slate-500 text-sm py-4 text-center">Nenhum integrante cadastrado ainda.</p>
+        <% } %>
+        <% ministrantes.forEach(m => { %>
+          <div class="py-3.5 flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold text-white text-sm truncate"><%= m.nome %></p>
+              <p class="text-xs text-slate-400 mt-0.5"><%= m.total_cancoes %> <%= m.total_cancoes === 1 ? 'música ministrada' : 'músicas ministradas' %></p>
+            </div>
+            <form action="/ministrantes/<%= m.id %>/delete" method="POST" onsubmit="return confirm('Tem certeza que deseja remover este integrante?')">
+              <button type="submit" class="text-xs text-rose-400 hover:text-rose-300 font-medium py-1.5 px-2 rounded-lg hover:bg-rose-500/10 transition-colors">
+                Remover
+              </button>
+            </form>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

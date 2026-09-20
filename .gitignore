@@ -1,0 +1,6 @@
+node_modules/
+louvor.db
+cloudflared.exe
+.env
+.env.*
+!.env.example
