@@ -4,3 +4,4 @@ cloudflared.exe
 .env
 .env.*
 !.env.example
+*.sql
