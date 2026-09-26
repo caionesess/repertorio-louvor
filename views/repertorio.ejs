@@ -3,31 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= repertorio.nome %> - Louvor dos Jovens ICO</title>
+  <title><%= repertorio.nome %> - Louvor Jovens</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen antialiased flex flex-col">
-  <!-- Topbar Mobile-first -->
-  <nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 px-4 sm:px-6 py-3">
-    <div class="max-w-5xl mx-auto flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2 min-w-0">
-        <a href="/" class="text-slate-400 hover:text-white p-1 text-sm font-medium">← Voltar</a>
+  <!-- Topbar com navegação completa (incluindo Acervo) -->
+<!-- Topbar com navegação padronizada -->
+<nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 px-4 sm:px-6 py-3.5">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center justify-between w-full sm:w-auto gap-3">
+        <a href="/" class="text-slate-400 hover:text-white text-sm font-medium flex items-center gap-1 shrink-0 transition-colors">
+          ← Voltar
+        </a>
         <span class="text-slate-600 hidden sm:inline">/</span>
-        <div class="min-w-0">
-          <h1 class="text-sm sm:text-base font-bold text-white truncate"><%= repertorio.nome %></h1>
-          <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-700 text-amber-300">
-              <%= new Date(repertorio.data + 'T00:00:00').toLocaleDateString('pt-BR') %>
-            </span>
-            <button type="button" onclick="abrirModalEdicaoRepertorio()" class="text-[11px] text-slate-400 hover:text-amber-300 underline">
-              Editar
-            </button>
-          </div>
+        <div class="flex items-center gap-2 min-w-0">
+          <h1 class="text-sm sm:text-base font-bold text-white truncate max-w-[160px] sm:max-w-xs" title="<%= repertorio.nome %>">
+            <%= repertorio.nome %>
+          </h1>
+          <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-700 text-amber-300 shrink-0">
+            <%= new Date(repertorio.data + 'T00:00:00').toLocaleDateString('pt-BR') %>
+          </span>
+          <button type="button" onclick="abrirModalEdicaoRepertorio()" class="text-[11px] text-slate-400 hover:text-amber-300 underline shrink-0">
+            Editar
+          </button>
         </div>
       </div>
-      <div class="flex items-center space-x-2 text-xs sm:text-sm shrink-0">
-        <a href="/ministrantes" class="text-slate-400 hover:text-white px-2 py-1">Ministrantes</a>
-        <a href="/analytics" class="text-slate-400 hover:text-white px-2 py-1">Analytics</a>
+
+      <div class="flex items-center justify-around w-full sm:w-auto space-x-1 sm:space-x-3 border-t sm:border-t-0 border-slate-700/60 pt-2 sm:pt-0 text-xs sm:text-sm">
+        <a href="/" class="px-3 py-1.5 rounded-lg bg-slate-700 text-amber-300 font-semibold transition-colors">Repertórios</a>
+        <a href="/acervo" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Acervo</a>
+        <a href="/ministrantes" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Ministrantes</a>
+        <a href="/analytics" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Analytics</a>
       </div>
     </div>
   </nav>
@@ -76,14 +82,14 @@
         <!-- Seleção de Ministrantes -->
         <div>
           <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">
-            Ministrantes (Selecione quem cantou)
+            Ministrantes (Quem ministrou)
           </label>
           <% if (ministrantes.length === 0) { %>
-            <p class="text-xs text-rose-400 py-2">
-              Nenhum integrante cadastrado. <a href="/ministrantes" class="underline text-amber-400 font-medium">Cadastre integrantes primeiro</a>.
+            <p class="text-xs text-rose-400 py-1">
+              Nenhum integrante cadastrado. <a href="/ministrantes" class="underline text-amber-400 font-medium">Cadastrar</a>.
             </p>
           <% } else { %>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto bg-slate-900 p-3 rounded-xl border border-slate-700">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-36 overflow-y-auto bg-slate-900 p-3 rounded-xl border border-slate-700">
               <% ministrantes.forEach(min => { %>
                 <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-800 text-xs text-slate-200 cursor-pointer select-none">
                   <input type="checkbox" name="ministrantes_ids" value="<%= min.id %>" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-0">
@@ -94,8 +100,46 @@
           <% } %>
         </div>
 
+        <!-- Seleção de Temas (com criação instantânea de novo tema) -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs uppercase font-semibold text-slate-400">
+              Temas / Tags da Canção
+            </label>
+            <button type="button" onclick="mostrarInputNovoTema()" class="text-xs text-amber-400 hover:text-amber-300 font-medium">
+              + Criar Novo Tema Agora
+            </button>
+          </div>
+
+          <!-- Caixa para adicionar novo tema na hora sem reload -->
+          <div id="boxNovoTema" class="hidden mb-2.5 p-2.5 bg-slate-900 rounded-xl border border-amber-500/50 flex gap-2 items-center">
+            <input type="text" id="inputNomeNovoTema" placeholder="Nome da tag (Ex: Cruz, Ceia, Avivamento)" 
+              class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+            <button type="button" onclick="salvarNovoTemaRapido()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">
+              Adicionar
+            </button>
+            <button type="button" onclick="esconderInputNovoTema()" class="text-slate-400 hover:text-white text-xs px-2">
+              Cancelar
+            </button>
+          </div>
+
+          <div id="containerTemasCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-36 overflow-y-auto bg-slate-900 p-3 rounded-xl border border-slate-700">
+            <% if (temas.length === 0) { %>
+              <p id="msgSemTemas" class="text-xs text-slate-500 italic col-span-full py-1">
+                Nenhum tema criado ainda. Clique em "+ Criar Novo Tema Agora" acima.
+              </p>
+            <% } %>
+            <% temas.forEach(t => { %>
+              <label class="tema-label flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-800 text-xs text-slate-200 cursor-pointer select-none">
+                <input type="checkbox" name="temas_ids" value="<%= t.id %>" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                <span class="truncate">#<%= t.nome %></span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+
         <div class="flex justify-end pt-1">
-          <button type="submit" <%= ministrantes.length === 0 ? 'disabled' : '' %> class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold py-3 sm:py-2.5 px-6 rounded-xl transition-colors text-sm">
+          <button type="submit" <%= ministrantes.length === 0 ? 'disabled' : '' %> class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold py-3 sm:py-2.5 px-6 rounded-xl transition-colors text-sm shadow-sm">
             Salvar Música
           </button>
         </div>
@@ -123,9 +167,20 @@
               <h3 class="font-bold text-white text-base mt-2.5 line-clamp-1"><%= m.titulo %></h3>
               <p class="text-xs text-slate-400 truncate mt-0.5"><%= m.artista %></p>
 
+              <!-- Tags de Temas -->
+              <% if (m.temas && m.temas.length > 0) { %>
+                <div class="mt-2.5 flex flex-wrap gap-1">
+                  <% m.temas.forEach(t => { %>
+                    <span class="bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] px-2 py-0.5 rounded-md font-medium">
+                      #<%= t.nome %>
+                    </span>
+                  <% }) %>
+                </div>
+              <% } %>
+
               <!-- Ministrantes -->
-              <div class="mt-3.5 pt-3 border-t border-slate-700/60">
-                <p class="text-[11px] uppercase font-semibold text-slate-400 mb-1.5">Ministrado por:</p>
+              <div class="mt-3 pt-3 border-t border-slate-700/60">
+                <p class="text-[11px] uppercase font-semibold text-slate-400 mb-1">Ministrado por:</p>
                 <div class="flex flex-wrap gap-1">
                   <% m.ministrantes.forEach(min => { %>
                     <span class="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs px-2 py-0.5 rounded-md font-medium">
@@ -161,7 +216,7 @@
     </div>
   </main>
 
-  <!-- Modal Edição de Repertório (Bottom Sheet Mobile) -->
+  <!-- Modal Edição do Repertório -->
   <div id="modalEditRepertorio" class="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 hidden">
     <div class="bg-slate-800 border-t sm:border border-slate-700 rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl">
       <div class="flex justify-between items-center mb-4">
@@ -192,7 +247,7 @@
     </div>
   </div>
 
-  <!-- Modal Edição da Música (Bottom Sheet Mobile) -->
+  <!-- Modal Edição da Música -->
   <div id="modalEdicao" class="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 hidden">
     <div class="bg-slate-800 border-t sm:border border-slate-700 rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
@@ -230,11 +285,23 @@
 
         <div>
           <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Ministrantes</label>
-          <div class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto bg-slate-900 p-3 rounded-xl border border-slate-700">
+          <div class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto bg-slate-900 p-3 rounded-xl border border-slate-700">
             <% ministrantes.forEach(min => { %>
               <label class="flex items-center gap-2 p-1 text-xs text-slate-300 hover:text-white cursor-pointer select-none">
                 <input type="checkbox" name="ministrantes_ids" value="<%= min.id %>" class="edit-min-checkbox w-4 h-4 rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-0">
                 <span class="truncate"><%= min.nome %></span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Temas / Tags</label>
+          <div id="modalEditTemasContainer" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto bg-slate-900 p-3 rounded-xl border border-slate-700">
+            <% temas.forEach(t => { %>
+              <label class="flex items-center gap-2 p-1 text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+                <input type="checkbox" name="temas_ids" value="<%= t.id %>" class="edit-tema-checkbox w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                <span class="truncate">#<%= t.nome %></span>
               </label>
             <% }) %>
           </div>
@@ -304,6 +371,63 @@
       document.getElementById('ytResults').classList.add('hidden');
     }
 
+    // Funções para adicionar tema na hora
+    function mostrarInputNovoTema() {
+      document.getElementById('boxNovoTema').classList.remove('hidden');
+      document.getElementById('inputNomeNovoTema').focus();
+    }
+
+    function esconderInputNovoTema() {
+      document.getElementById('boxNovoTema').classList.add('hidden');
+      document.getElementById('inputNomeNovoTema').value = '';
+    }
+
+    async function salvarNovoTemaRapido() {
+      const input = document.getElementById('inputNomeNovoTema');
+      const nome = input.value.trim();
+      if (!nome) return;
+
+      try {
+        const res = await fetch('/api/temas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome })
+        });
+        const data = await res.json();
+
+        if (data.id) {
+          const container = document.getElementById('containerTemasCheckboxes');
+          const msgVazia = document.getElementById('msgSemTemas');
+          if (msgVazia) msgVazia.remove();
+
+          // Cria e marca a nova checkbox de tema instantaneamente
+          const label = document.createElement('label');
+          label.className = 'tema-label flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-800 text-xs text-slate-200 cursor-pointer select-none';
+          label.innerHTML = `
+            <input type="checkbox" name="temas_ids" value="${data.id}" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+            <span class="truncate">#${data.nome}</span>
+          `;
+          container.prepend(label);
+
+          // Atualiza também a lista dentro do modal de edição se necessário
+          const modalContainer = document.getElementById('modalEditTemasContainer');
+          if (modalContainer) {
+            const modalLabel = document.createElement('label');
+            modalLabel.className = 'flex items-center gap-2 p-1 text-xs text-slate-300 hover:text-white cursor-pointer select-none';
+            modalLabel.innerHTML = `
+              <input type="checkbox" name="temas_ids" value="${data.id}" class="edit-tema-checkbox w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+              <span class="truncate">#${data.nome}</span>
+            `;
+            modalContainer.prepend(modalLabel);
+          }
+
+          esconderInputNovoTema();
+        }
+      } catch (err) {
+        alert('Erro ao cadastrar novo tema');
+      }
+    }
+
     function abrirModalEdicao(encodedMusica) {
       const m = JSON.parse(decodeURIComponent(encodedMusica));
       document.getElementById('formEdicao').action = `/musicas/${m.id}/edit`;
@@ -312,9 +436,14 @@
       document.getElementById('editAno').value = m.ano || '';
       document.getElementById('editYoutubeUrl').value = m.youtube_id ? `https://www.youtube.com/watch?v=${m.youtube_id}` : '';
 
-      const currentIds = m.ministrantes.map(x => String(x.id));
+      const currentMinIds = m.ministrantes.map(x => String(x.id));
       document.querySelectorAll('.edit-min-checkbox').forEach(cb => {
-        cb.checked = currentIds.includes(cb.value);
+        cb.checked = currentMinIds.includes(cb.value);
+      });
+
+      const currentTemaIds = (m.temas || []).map(x => String(x.id));
+      document.querySelectorAll('.edit-tema-checkbox').forEach(cb => {
+        cb.checked = currentTemaIds.includes(cb.value);
       });
 
       document.getElementById('modalEdicao').classList.remove('hidden');

@@ -117,6 +117,165 @@ app.post('/ministrantes/:id/delete', async (req, res) => {
   }
 });
 
+// ---------------- GERENCIAMENTO DE TEMAS (TAGS) ----------------
+app.post('/temas', async (req, res) => {
+  const nome = req.body.nome?.trim();
+  const redirectTo = req.body.redirect_to || '/acervo';
+  if (nome) {
+    try {
+      await db.execute({
+        sql: 'INSERT INTO temas (nome) VALUES (?)',
+        args: [nome]
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  res.redirect(redirectTo);
+});
+
+// Rota de criação rápida de tema via AJAX/fetch
+app.post('/api/temas', async (req, res) => {
+  const nome = req.body.nome?.trim();
+  if (!nome) return res.status(400).json({ error: 'Nome obrigatório' });
+
+  try {
+    const insertRes = await db.execute({
+      sql: 'INSERT INTO temas (nome) VALUES (?)',
+      args: [nome]
+    });
+    const novoId = Number(insertRes.lastInsertRowid);
+    return res.json({ id: novoId, nome });
+  } catch (err) {
+    if (err.message && (err.message.includes('UNIQUE') || err.message.includes('constraint'))) {
+      // Se já existe, busca o existente para devolver
+      const existe = await db.execute({
+        sql: 'SELECT id, nome FROM temas WHERE LOWER(nome) = LOWER(?)',
+        args: [nome]
+      });
+      if (existe.rows[0]) return res.json(existe.rows[0]);
+    }
+    return res.status(500).json({ error: 'Erro ao cadastrar tema' });
+  }
+});
+
+app.post('/temas/:id/edit', async (req, res) => {
+  const nome = req.body.nome?.trim();
+  const redirectTo = req.body.redirect_to || '/acervo';
+  if (nome) {
+    await db.execute({
+      sql: 'UPDATE temas SET nome = ? WHERE id = ?',
+      args: [nome, req.params.id]
+    });
+  }
+  res.redirect(redirectTo);
+});
+
+app.post('/temas/:id/delete', async (req, res) => {
+  const redirectTo = req.body.redirect_to || '/acervo';
+  await db.execute({
+    sql: 'DELETE FROM temas WHERE id = ?',
+    args: [req.params.id]
+  });
+  res.redirect(redirectTo);
+});
+
+// ---------------- ACERVO (CATÁLOGO UNIFICADO DE MÚSICAS) ----------------
+app.get('/acervo', async (req, res) => {
+  try {
+    // 1. Busca todas as ocorrências de músicas com dados do repertório
+    const musicasRes = await db.execute(`
+      SELECT m.*, r.id as repertorio_id, r.nome as repertorio_nome, r.data as repertorio_data,
+        COALESCE(
+          (SELECT json_group_array(json_object('id', min.id, 'nome', min.nome))
+           FROM musica_ministrantes mm
+           JOIN ministrantes min ON min.id = mm.ministrante_id
+           WHERE mm.musica_id = m.id), '[]'
+        ) as ministrantes_json,
+        COALESCE(
+          (SELECT json_group_array(json_object('id', t.id, 'nome', t.nome))
+           FROM musica_temas mt
+           JOIN temas t ON t.id = mt.tema_id
+           WHERE mt.musica_id = m.id), '[]'
+        ) as temas_json
+      FROM musicas m
+      JOIN repertorios r ON r.id = m.repertorio_id
+      ORDER BY r.data DESC, m.id DESC
+    `);
+
+    // 2. Agrupa músicas repetidas pelo par (título normalizado + artista normalizado) ou link do YT
+    const musicasAgrupadasMap = new Map();
+
+    for (const row of musicasRes.rows) {
+      const chave = row.youtube_id 
+        ? `yt_${row.youtube_id}` 
+        : `meta_${row.titulo.trim().toLowerCase()}_${row.artista.trim().toLowerCase()}`;
+
+      const ministrantesItem = JSON.parse(row.ministrantes_json);
+      const temasItem = JSON.parse(row.temas_json);
+
+      const itemRepertorio = {
+        musica_id: row.id,
+        repertorio_id: row.repertorio_id,
+        repertorio_nome: row.repertorio_nome,
+        repertorio_data: row.repertorio_data,
+        ministrantes: ministrantesItem
+      };
+
+      if (!musicasAgrupadasMap.has(chave)) {
+        musicasAgrupadasMap.set(chave, {
+          titulo: row.titulo.trim(),
+          artista: row.artista.trim(),
+          ano: row.ano,
+          youtube_id: row.youtube_id,
+          repertorios: [itemRepertorio],
+          todos_ministrantes_map: new Map(),
+          todos_temas_map: new Map()
+        });
+      } else {
+        const cancao = musicasAgrupadasMap.get(chave);
+        cancao.repertorios.push(itemRepertorio);
+        if (!cancao.ano && row.ano) cancao.ano = row.ano;
+        if (!cancao.youtube_id && row.youtube_id) cancao.youtube_id = row.youtube_id;
+      }
+
+      // Adiciona ministrantes e temas sem duplicar
+      const cancao = musicasAgrupadasMap.get(chave);
+      ministrantesItem.forEach(m => cancao.todos_ministrantes_map.set(m.id, m));
+      temasItem.forEach(t => cancao.todos_temas_map.set(t.id, t));
+    }
+
+    // Transforma para o array final que a view usará
+    const musicas = Array.from(musicasAgrupadasMap.values()).map(c => ({
+      titulo: c.titulo,
+      artista: c.artista,
+      ano: c.ano,
+      youtube_id: c.youtube_id,
+      repertorios: c.repertorios,
+      total_vezes: c.repertorios.length,
+      ministrantes: Array.from(c.todos_ministrantes_map.values()),
+      temas: Array.from(c.todos_temas_map.values())
+    })).sort((a, b) => a.titulo.localeCompare(b.titulo));
+
+    // 3. Busca lista de temas cadastrados com contagem única de músicas do acervo
+    const temasRes = await db.execute(`
+      SELECT t.*, COUNT(DISTINCT mt.musica_id) as total_musicas
+      FROM temas t
+      LEFT JOIN musica_temas mt ON mt.tema_id = t.id
+      GROUP BY t.id
+      ORDER BY t.nome ASC
+    `);
+
+    res.render('acervo', {
+      musicas,
+      temas: temasRes.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao carregar acervo');
+  }
+});
+
 // ---------------- DETALHES DO REPERTÓRIO ----------------
 app.get('/repertorios/:id', async (req, res) => {
   try {
@@ -135,7 +294,13 @@ app.get('/repertorios/:id', async (req, res) => {
              FROM musica_ministrantes mm
              JOIN ministrantes min ON min.id = mm.ministrante_id
              WHERE mm.musica_id = m.id), '[]'
-          ) as ministrantes_json
+          ) as ministrantes_json,
+          COALESCE(
+            (SELECT json_group_array(json_object('id', t.id, 'nome', t.nome))
+             FROM musica_temas mt
+             JOIN temas t ON t.id = mt.tema_id
+             WHERE mt.musica_id = m.id), '[]'
+          ) as temas_json
         FROM musicas m 
         WHERE m.repertorio_id = ? 
         ORDER BY m.id ASC
@@ -145,12 +310,19 @@ app.get('/repertorios/:id', async (req, res) => {
 
     const musicas = musicasRes.rows.map(m => ({
       ...m,
-      ministrantes: JSON.parse(m.ministrantes_json)
+      ministrantes: JSON.parse(m.ministrantes_json),
+      temas: JSON.parse(m.temas_json)
     }));
 
     const minRes = await db.execute('SELECT * FROM ministrantes ORDER BY nome ASC');
+    const temasRes = await db.execute('SELECT * FROM temas ORDER BY nome ASC');
 
-    res.render('repertorio', { repertorio, musicas, ministrantes: minRes.rows });
+    res.render('repertorio', { 
+      repertorio, 
+      musicas, 
+      ministrantes: minRes.rows,
+      temas: temasRes.rows
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao buscar repertório');
@@ -201,14 +373,18 @@ app.get('/api/youtube-search', async (req, res) => {
   }
 });
 
-// Músicas
+// Adicionar música com Ministrantes E Temas
 app.post('/repertorios/:id/musicas', async (req, res) => {
-  let { titulo, artista, ano, ministrantes_ids, youtube_url } = req.body;
+  let { titulo, artista, ano, ministrantes_ids, temas_ids, youtube_url } = req.body;
   const repertorioId = req.params.id;
 
   if (!Array.isArray(ministrantes_ids)) {
     ministrantes_ids = ministrantes_ids ? [ministrantes_ids] : [];
   }
+  if (!Array.isArray(temas_ids)) {
+    temas_ids = temas_ids ? [temas_ids] : [];
+  }
+
   const youtubeId = extrairYoutubeId(youtube_url) || youtube_url;
 
   if (titulo && artista && ministrantes_ids.length > 0) {
@@ -218,10 +394,20 @@ app.post('/repertorios/:id/musicas', async (req, res) => {
     });
 
     const musicaId = Number(insertRes.lastInsertRowid);
+    
+    // Associa Ministrantes
     for (const minId of ministrantes_ids) {
       await db.execute({
         sql: 'INSERT INTO musica_ministrantes (musica_id, ministrante_id) VALUES (?, ?)',
         args: [musicaId, parseInt(minId)]
+      });
+    }
+
+    // Associa Temas
+    for (const tId of temas_ids) {
+      await db.execute({
+        sql: 'INSERT INTO musica_temas (musica_id, tema_id) VALUES (?, ?)',
+        args: [musicaId, parseInt(tId)]
       });
     }
   }
@@ -229,13 +415,18 @@ app.post('/repertorios/:id/musicas', async (req, res) => {
   res.redirect(`/repertorios/${repertorioId}`);
 });
 
+// Editar música (com Ministrantes e Temas)
 app.post('/musicas/:id/edit', async (req, res) => {
   const musicaId = req.params.id;
-  let { repertorio_id, titulo, artista, ano, ministrantes_ids, youtube_url } = req.body;
+  let { repertorio_id, titulo, artista, ano, ministrantes_ids, temas_ids, youtube_url, redirect_to } = req.body;
 
   if (!Array.isArray(ministrantes_ids)) {
     ministrantes_ids = ministrantes_ids ? [ministrantes_ids] : [];
   }
+  if (!Array.isArray(temas_ids)) {
+    temas_ids = temas_ids ? [temas_ids] : [];
+  }
+
   const youtubeId = extrairYoutubeId(youtube_url) || youtube_url;
 
   if (titulo && artista && ministrantes_ids.length > 0) {
@@ -244,28 +435,46 @@ app.post('/musicas/:id/edit', async (req, res) => {
       args: [titulo.trim(), artista.trim(), ano ? parseInt(ano) : null, youtubeId || null, musicaId]
     });
 
+    // Atualiza Ministrantes
     await db.execute({
       sql: 'DELETE FROM musica_ministrantes WHERE musica_id = ?',
       args: [musicaId]
     });
-
     for (const minId of ministrantes_ids) {
       await db.execute({
         sql: 'INSERT INTO musica_ministrantes (musica_id, ministrante_id) VALUES (?, ?)',
         args: [musicaId, parseInt(minId)]
       });
     }
+
+    // Atualiza Temas
+    await db.execute({
+      sql: 'DELETE FROM musica_temas WHERE musica_id = ?',
+      args: [musicaId]
+    });
+    for (const tId of temas_ids) {
+      await db.execute({
+        sql: 'INSERT INTO musica_temas (musica_id, tema_id) VALUES (?, ?)',
+        args: [musicaId, parseInt(tId)]
+      });
+    }
   }
 
+  if (redirect_to === 'acervo') {
+    return res.redirect('/acervo');
+  }
   res.redirect(`/repertorios/${repertorio_id}`);
 });
 
 app.post('/musicas/:id/delete', async (req, res) => {
-  const { repertorio_id } = req.body;
+  const { repertorio_id, redirect_to } = req.body;
   await db.execute({
     sql: 'DELETE FROM musicas WHERE id = ?',
     args: [req.params.id]
   });
+  if (redirect_to === 'acervo') {
+    return res.redirect('/acervo');
+  }
   res.redirect(`/repertorios/${repertorio_id}`);
 });
 

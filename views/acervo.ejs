@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Acervo de Músicas - Louvor Jovens</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased flex flex-col">
+  <!-- Navbar -->
+<nav class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 px-4 sm:px-6 py-3.5">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center justify-between w-full sm:w-auto">
+        <h1 class="text-xl font-bold tracking-tight text-amber-400">Louvor Jovens</h1>
+      </div>
+      <div class="flex items-center justify-around w-full sm:w-auto space-x-1 sm:space-x-3 border-t sm:border-t-0 border-slate-700/60 pt-2 sm:pt-0 text-xs sm:text-sm">
+        <a href="/" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Repertórios</a>
+        <a href="/acervo" class="px-3 py-1.5 rounded-lg bg-slate-700 text-amber-300 font-semibold transition-colors">Acervo</a>
+        <a href="/ministrantes" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Ministrantes</a>
+        <a href="/analytics" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition-colors">Analytics</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-6">
+    <!-- Cabeçalho do Acervo e Ações -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 sm:p-5 rounded-2xl">
+      <div>
+        <h2 class="text-lg font-bold text-white">Acervo de Músicas</h2>
+        <p class="text-xs text-slate-400 mt-0.5"><%= musicas.length %> canções únicas catalogadas</p>
+      </div>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <!-- Alternador de Visão -->
+        <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs flex-1 sm:flex-initial">
+          <button id="btnViewLista" onclick="alternarVisao('lista')" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg font-semibold bg-amber-500 text-slate-950 transition-colors">
+            Lista Completa
+          </button>
+          <button id="btnViewTemas" onclick="alternarVisao('temas')" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">
+            Por Tema
+          </button>
+        </div>
+        <button onclick="abrirModalGerenciarTemas()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-amber-300 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap">
+          ⚙ Temas
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Pesquisa e Filtros por Tags de Tema -->
+    <div class="space-y-3">
+      <div class="relative">
+        <input type="text" id="campoBusca" oninput="filtrarMusicas()" placeholder="Buscar canção, artista ou ano..." 
+          class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-sm focus:outline-none focus:border-amber-400">
+        <span class="absolute left-3.5 top-3 text-slate-400 text-sm">🔍</span>
+      </div>
+
+      <!-- Filtros rápidos por Pílula de Tema -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <button onclick="selecionarFiltroTema('')" class="tema-chip px-3 py-1.5 rounded-lg font-medium whitespace-nowrap bg-amber-500 text-slate-950" data-tema="">
+          Todos
+        </button>
+        <% temas.forEach(t => { %>
+          <button onclick="selecionarFiltroTema('<%= t.nome %>')" class="tema-chip px-3 py-1.5 rounded-lg font-medium whitespace-nowrap bg-slate-800 border border-slate-700 text-slate-300 hover:text-white" data-tema="<%= t.nome %>">
+            #<%= t.nome %>
+          </button>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- VISÃO 1: LISTA COMPLETA DE MÚSICAS ÚNICAS -->
+    <div id="visaoLista" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+      <% if (musicas.length === 0) { %>
+        <div class="bg-slate-800/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center col-span-full">
+          <p class="text-slate-400 text-sm">Nenhuma música cadastrada ainda.</p>
+        </div>
+      <% } %>
+      <% musicas.forEach((m) => { %>
+        <div class="card-musica bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-sm"
+             data-titulo="<%= m.titulo.toLowerCase() %>" 
+             data-artista="<%= m.artista.toLowerCase() %>" 
+             data-ano="<%= m.ano || '' %>"
+             data-temas="<%= m.temas.map(t => t.nome).join(';').toLowerCase() %>">
+          <div>
+            <div class="flex justify-between items-start gap-2">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+                <%= m.ano ? m.ano : 'Ano N/I' %>
+              </span>
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                <%= m.total_vezes %> <%= m.total_vezes === 1 ? 'culto' : 'cultos' %>
+              </span>
+            </div>
+            
+            <h3 class="font-bold text-white text-base mt-2.5 line-clamp-1"><%= m.titulo %></h3>
+            <p class="text-xs text-slate-400 truncate mt-0.5"><%= m.artista %></p>
+
+            <!-- Tags de Temas Consolidados -->
+            <% if (m.temas && m.temas.length > 0) { %>
+              <div class="mt-2.5 flex flex-wrap gap-1">
+                <% m.temas.forEach(t => { %>
+                  <span class="bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] px-2 py-0.5 rounded-md font-medium">
+                    #<%= t.nome %>
+                  </span>
+                <% }) %>
+              </div>
+            <% } %>
+
+            <!-- Todos os Ministrantes que já cantaram -->
+            <div class="mt-3.5 pt-3 border-t border-slate-700/60">
+              <p class="text-[11px] uppercase font-semibold text-slate-400 mb-1">Já ministrado por:</p>
+              <div class="flex flex-wrap gap-1">
+                <% if (m.ministrantes.length === 0) { %>
+                  <span class="text-xs text-slate-500">Nenhum registrado</span>
+                <% } %>
+                <% m.ministrantes.forEach(min => { %>
+                  <span class="bg-slate-700/60 text-slate-300 text-xs px-2 py-0.5 rounded-md font-medium">
+                    <%= min.nome %>
+                  </span>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between pt-3 border-t border-slate-700/60 text-xs">
+            <div>
+              <% if (m.youtube_id) { %>
+                <a href="https://www.youtube.com/watch?v=<%= m.youtube_id %>" target="_blank" class="text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 py-1">
+                  ▶ YouTube
+                </a>
+              <% } %>
+            </div>
+            <!-- Botão que abre a lista de repertórios onde a música esteve presente -->
+            <button type="button" onclick="abrirModalOcorrencias('<%= encodeURIComponent(JSON.stringify(m)) %>')" class="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 py-1">
+              Ver Repertórios (<%= m.total_vezes %>) →
+            </button>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- VISÃO 2: AGRUPADO POR TEMA -->
+    <div id="visaoTemas" class="space-y-6 hidden">
+      <% if (temas.length === 0) { %>
+        <div class="bg-slate-800/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center">
+          <p class="text-slate-400 text-sm">Nenhum tema cadastrado ainda. Clique em "⚙ Temas" acima para criar!</p>
+        </div>
+      <% } %>
+
+      <% temas.forEach(t => { 
+        const musicasDoTema = musicas.filter(m => m.temas.some(temaItem => temaItem.id === t.id));
+      %>
+        <div class="bloco-tema bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-5" data-tema-nome="<%= t.nome.toLowerCase() %>">
+          <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+            <h3 class="text-base font-bold text-amber-400 flex items-center gap-2">
+              <span>#<%= t.nome %></span>
+              <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-medium"><%= musicasDoTema.length %> canções</span>
+            </h3>
+          </div>
+
+          <% if (musicasDoTema.length === 0) { %>
+            <p class="text-xs text-slate-500 italic py-2">Nenhuma música vinculada a este tema ainda.</p>
+          <% } else { %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <% musicasDoTema.forEach(m => { %>
+                <div class="bg-slate-900 border border-slate-700/80 rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <h4 class="font-bold text-white text-sm line-clamp-1"><%= m.titulo %></h4>
+                    <p class="text-xs text-slate-400 truncate"><%= m.artista %> • <%= m.ano || 'S/A' %></p>
+                  </div>
+                  <div class="mt-3 flex items-center justify-between text-xs pt-2 border-t border-slate-800">
+                    <span class="text-[11px] text-amber-300/80">
+                      <%= m.total_vezes %> <%= m.total_vezes === 1 ? 'culto' : 'cultos' %>
+                    </span>
+                    <button type="button" onclick="abrirModalOcorrencias('<%= encodeURIComponent(JSON.stringify(m)) %>')" class="text-amber-400 hover:underline">
+                      Ver cultos
+                    </button>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </main>
+
+  <!-- MODAL: ONDE FOI TOCADA (Lista os Repertórios da Canção) -->
+  <div id="modalOcorrencias" class="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 hidden">
+    <div class="bg-slate-800 border-t sm:border border-slate-700 rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-700">
+        <div class="min-w-0 pr-3">
+          <h3 id="modalMusicaTitulo" class="text-base font-bold text-white truncate"></h3>
+          <p id="modalMusicaArtista" class="text-xs text-slate-400 truncate"></p>
+        </div>
+        <button onclick="fecharModalOcorrencias()" class="text-slate-400 hover:text-white text-2xl leading-none p-1">&times;</button>
+      </div>
+
+      <div class="text-xs uppercase font-semibold text-slate-400 mb-2">Repertórios em que foi ministrada:</div>
+
+      <div id="listaOcorrenciasRepertorios" class="divide-y divide-slate-700/60 overflow-y-auto flex-1 space-y-1">
+        <!-- Itens inseridos dinamicamente via JS -->
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-700">
+        <button type="button" onclick="fecharModalOcorrencias()" class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold text-white">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GERENCIAR TEMAS (Cadastrar, Editar e Excluir) -->
+  <div id="modalTemas" class="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 hidden">
+    <div class="bg-slate-800 border-t sm:border border-slate-700 rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-base font-bold text-white">Gerenciar Temas (Tags)</h3>
+        <button onclick="fecharModalGerenciarTemas()" class="text-slate-400 hover:text-white text-2xl leading-none p-1">&times;</button>
+      </div>
+
+      <form action="/temas" method="POST" class="flex gap-2 mb-5">
+        <input type="hidden" name="redirect_to" value="/acervo">
+        <input type="text" name="nome" placeholder="Novo tema (Ex: Ceia, Avivamento)" required 
+          class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-amber-400">
+        <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-colors">
+          + Criar
+        </button>
+      </form>
+
+      <div class="divide-y divide-slate-700/60">
+        <% if (temas.length === 0) { %>
+          <p class="text-slate-500 text-xs py-3 text-center">Nenhum tema criado.</p>
+        <% } %>
+        <% temas.forEach(t => { %>
+          <div class="py-2.5 flex items-center justify-between gap-2">
+            <span class="text-sm font-medium text-slate-200 truncate">#<%= t.nome %></span>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="editarTemaPrompt('<%= t.id %>', '<%= t.nome %>')" class="text-xs text-slate-400 hover:text-white">
+                Editar
+              </button>
+              <form action="/temas/<%= t.id %>/delete" method="POST" onsubmit="return confirm('Deseja excluir este tema? As músicas associadas não serão apagadas.')">
+                <input type="hidden" name="redirect_to" value="/acervo">
+                <button type="submit" class="text-xs text-rose-400 hover:text-rose-300">Excluir</button>
+              </form>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-slate-700">
+        <button type="button" onclick="fecharModalGerenciarTemas()" class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold text-white">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <form id="formEditTemaOculto" method="POST" class="hidden">
+    <input type="hidden" name="redirect_to" value="/acervo">
+    <input type="hidden" name="nome" id="inputNomeEditTema">
+  </form>
+
+  <script>
+    let temaFiltroAtivo = '';
+
+    function alternarVisao(modo) {
+      const vLista = document.getElementById('visaoLista');
+      const vTemas = document.getElementById('visaoTemas');
+      const bLista = document.getElementById('btnViewLista');
+      const bTemas = document.getElementById('btnViewTemas');
+
+      if (modo === 'lista') {
+        vLista.classList.remove('hidden');
+        vTemas.classList.add('hidden');
+        bLista.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg font-semibold bg-amber-500 text-slate-950 transition-colors";
+        bTemas.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors";
+      } else {
+        vLista.classList.add('hidden');
+        vTemas.classList.remove('hidden');
+        bTemas.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg font-semibold bg-amber-500 text-slate-950 transition-colors";
+        bLista.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white transition-colors";
+      }
+    }
+
+    function selecionarFiltroTema(tema) {
+      temaFiltroAtivo = tema.toLowerCase();
+
+      document.querySelectorAll('.tema-chip').forEach(btn => {
+        if (btn.dataset.tema.toLowerCase() === temaFiltroAtivo) {
+          btn.className = "tema-chip px-3 py-1.5 rounded-lg font-medium whitespace-nowrap bg-amber-500 text-slate-950";
+        } else {
+          btn.className = "tema-chip px-3 py-1.5 rounded-lg font-medium whitespace-nowrap bg-slate-800 border border-slate-700 text-slate-300 hover:text-white";
+        }
+      });
+
+      filtrarMusicas();
+    }
+
+    function filtrarMusicas() {
+      const termo = document.getElementById('campoBusca').value.toLowerCase().trim();
+      const cards = document.querySelectorAll('.card-musica');
+
+      cards.forEach(c => {
+        const titulo = c.dataset.titulo || '';
+        const artista = c.dataset.artista || '';
+        const ano = c.dataset.ano || '';
+        const temas = c.dataset.temas || '';
+
+        const bateuTexto = !termo || titulo.includes(termo) || artista.includes(termo) || ano.includes(termo);
+        const bateuTema = !temaFiltroAtivo || temas.split(';').includes(temaFiltroAtivo);
+
+        if (bateuTexto && bateuTema) {
+          c.classList.remove('hidden');
+        } else {
+          c.classList.add('hidden');
+        }
+      });
+
+      document.querySelectorAll('.bloco-tema').forEach(b => {
+        const nomeTema = b.dataset.temaNome;
+        if (!temaFiltroAtivo || nomeTema === temaFiltroAtivo) {
+          b.classList.remove('hidden');
+        } else {
+          b.classList.add('hidden');
+        }
+      });
+    }
+
+    // Modal de Ocorrências dos Repertórios
+    function abrirModalOcorrencias(encodedMusica) {
+      const m = JSON.parse(decodeURIComponent(encodedMusica));
+      document.getElementById('modalMusicaTitulo').innerText = m.titulo;
+      document.getElementById('modalMusicaArtista').innerText = m.artista + (m.ano ? ` • ${m.ano}` : '');
+
+      const container = document.getElementById('listaOcorrenciasRepertorios');
+      container.innerHTML = m.repertorios.map(rep => {
+        const dataFormatada = new Date(rep.repertorio_data + 'T00:00:00').toLocaleDateString('pt-BR');
+        const minNomes = rep.ministrantes && rep.ministrantes.length > 0 
+          ? rep.ministrantes.map(x => x.nome).join(', ') 
+          : 'Não informado';
+
+        return `
+          <div class="py-2.5 flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-700 text-amber-300">${dataFormatada}</span>
+                <p class="font-medium text-white text-xs truncate">${rep.repertorio_nome}</p>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Ministrado por: <span class="text-slate-300 font-medium">${minNomes}</span></p>
+            </div>
+            <a href="/repertorios/${rep.repertorio_id}" class="text-xs bg-slate-700 hover:bg-slate-600 text-amber-300 font-semibold px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+              Abrir Culto →
+            </a>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('modalOcorrencias').classList.remove('hidden');
+    }
+
+    function fecharModalOcorrencias() {
+      document.getElementById('modalOcorrencias').classList.add('hidden');
+    }
+
+    function abrirModalGerenciarTemas() {
+      document.getElementById('modalTemas').classList.remove('hidden');
+    }
+
+    function fecharModalGerenciarTemas() {
+      document.getElementById('modalTemas').classList.add('hidden');
+    }
+
+    function editarTemaPrompt(id, nomeAtual) {
+      const novoNome = prompt('Editar nome do tema:', nomeAtual);
+      if (novoNome && novoNome.trim() && novoNome.trim() !== nomeAtual) {
+        const form = document.getElementById('formEditTemaOculto');
+        form.action = `/temas/${id}/edit`;
+        document.getElementById('inputNomeEditTema').value = novoNome.trim();
+        form.submit();
+      }
+    }
+  </script>
+</body>
+</html>
